@@ -1,0 +1,143 @@
+{
+  "theme": "light",
+  "archetype": "4 (Swiss & High-Contrast)",
+  "rationale": "For a personal finance management tool, the user needs a sense of authority, clarity, and precision. A minimalist, professional, high-contrast UI (Swiss Brutalist inspired) conveys trustworthiness and objectivity, keeping focus heavily on the data rather than unnecessary decorations.",
+  "colors": {
+    "background": {
+      "default": "#FDFDFD",
+      "card": "#FFFFFF",
+      "header": "rgba(255, 255, 255, 0.8)",
+      "ai_insight_panel": "#F4F5F7"
+    },
+    "text": {
+      "primary": "#09090B",
+      "secondary": "#52525B",
+      "tertiary": "#A1A1AA",
+      "inverse": "#FFFFFF"
+    },
+    "border": {
+      "default": "#E4E4E7",
+      "focus": "#18181B",
+      "active": "#1D4ED8"
+    },
+    "accents": {
+      "primary": "#09090B",
+      "primary_hover": "#27272A",
+      "ai_cta": "#1D4ED8",
+      "ai_cta_hover": "#1E3A8A",
+      "income": "#059669",
+      "expense": "#E11D48",
+      "balance_positive": "#09090B",
+      "balance_negative": "#E11D48"
+    }
+  },
+  "typography": {
+    "font_families": {
+      "headings": "'Outfit', sans-serif",
+      "body": "'Manrope', sans-serif",
+      "numbers_and_data": "'JetBrains Mono', monospace",
+      "ai_reasoning": "'JetBrains Mono', monospace"
+    },
+    "scales": {
+      "h1": "text-4xl lg:text-5xl font-bold tracking-tighter leading-none text-[#09090B]",
+      "h2": "text-2xl lg:text-3xl font-bold tracking-tight text-[#09090B]",
+      "h3": "text-xl font-semibold tracking-tight text-[#09090B]",
+      "card_title": "text-sm uppercase tracking-[0.2em] font-semibold text-[#52525B]",
+      "metric_value": "text-4xl lg:text-5xl font-medium tracking-tight font-['JetBrains_Mono']",
+      "body": "text-base text-[#52525B] leading-relaxed font-['Manrope']",
+      "small": "text-sm text-[#52525B]",
+      "micro": "text-xs uppercase tracking-wider text-[#A1A1AA]"
+    }
+  },
+  "layout": {
+    "grid_system": "The 'Control Room' Grid. Base: grid-cols-1 lg:grid-cols-12 gap-6 p-6 lg:p-10",
+    "structure": {
+      "sidebar": "Fixed left sidebar on desktop, bottom tab bar or hamburger on mobile. Contains brand logo, navigation links, and user profile.",
+      "main_content": "margin-left to accommodate sidebar. Max width 1600px, centered.",
+      "header": "Sticky top, crystal glassmorphism: backdrop-blur-xl bg-white/80, 1px bottom border-border. Houses page title, date picker/filter, and the 'Analyze My Finances' primary action button.",
+      "dashboard_widgets": {
+        "summary_cards": "col-span-1 md:col-span-4 (Income, Expense, Balance). Height should be identical.",
+        "bar_chart": "col-span-1 md:col-span-8 lg:col-span-8 row-span-2. Shows monthly income vs expense trends.",
+        "pie_chart": "col-span-1 md:col-span-4 lg:col-span-4 row-span-2. Shows expense breakdown by category.",
+        "recent_transactions": "col-span-1 lg:col-span-12. A clean, dense data table."
+      }
+    },
+    "spacing": {
+      "section_gap": "gap-8 lg:gap-12",
+      "card_padding": "p-6 lg:p-8"
+    }
+  },
+  "components": {
+    "cards": {
+      "style": "Flat Solid. bg-white, 1px solid #E4E4E7, rounded-xl. NO SHADOWS. Pure structural borders.",
+      "hover_state": "Slight border darken to #A1A1AA, no elevation."
+    },
+    "buttons": {
+      "primary": "bg-[#09090B] text-white rounded-lg px-6 py-3 font-semibold tracking-wide transition-all hover:bg-[#27272A] active:scale-[0.98]",
+      "ai_analyze": "bg-[#1D4ED8] text-white rounded-lg px-6 py-3 font-semibold tracking-wide transition-all shadow-[0_0_20px_rgba(29,78,216,0.3)] hover:shadow-[0_0_30px_rgba(29,78,216,0.5)] hover:bg-[#1E3A8A] flex items-center gap-2",
+      "secondary": "bg-transparent text-[#09090B] border border-[#E4E4E7] rounded-lg px-6 py-3 font-medium transition-all hover:border-[#09090B]"
+    },
+    "inputs_and_forms": {
+      "style": "bg-[#FDFDFD] border border-[#E4E4E7] rounded-lg px-4 py-3 text-base focus:border-[#09090B] focus:ring-1 focus:ring-[#09090B] outline-none transition-all",
+      "labels": "text-sm font-semibold text-[#09090B] mb-2 block"
+    },
+    "ai_insights_panel": {
+      "style": "Glassmorphism over a subtle texture. backdrop-blur-2xl bg-white/90 border border-white/40 shadow-2xl rounded-2xl p-8 relative overflow-hidden",
+      "raw_reasoning_accordion": "A highly technical looking accordion using JetBrains Mono font, text-xs, text-gray-500, indicating the AI's internal thought process. By default closed."
+    },
+    "charts": {
+      "library_preference": "recharts via shadcn/ui",
+      "bar_chart_colors": {
+        "income": "#09090B",
+        "expense": "#E4E4E7"
+      },
+      "pie_chart_colors": [
+        "#09090B",
+        "#52525B",
+        "#A1A1AA",
+        "#E4E4E7",
+        "#F4F4F5"
+      ],
+      "styling": "Remove grid lines or keep them extremely faint (stroke='#F4F4F5'). Use solid fills, no gradients."
+    }
+  },
+  "animations": {
+    "page_load": "Fade in with slight upward translation (framer-motion, y: 10 to 0, opacity 0 to 1, duration 0.4s).",
+    "staggered_cards": "Stagger children by 0.1s on dashboard mount.",
+    "ai_loading": "A shimmer or 'tracing beam' effect around the 'Analyze My Finances' button while generating, transitioning to a smooth slide-over or modal expansion for the insights.",
+    "hover": "All interactive elements must have a 0.2s ease transition on background/border."
+  },
+  "icons": {
+    "library": "@phosphor-icons/react",
+    "style": "Duotone or Regular weight. Must maintain a professional, sharp look."
+  },
+  "images": {
+    "login_background": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/04c5176c-a459-4d76-8697-f64bc179b7af/images/e3ee49d1216bd2430b9130014eeaa9d9cebbec9c4055e038364806e1b75e95f6.png",
+      "usage": "Use this as the side-panel or background for the login/registration page. Ensure a dark gradient overlay if placing text, or use a 50/50 split screen layout."
+    },
+    "ai_insights_texture": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/04c5176c-a459-4d76-8697-f64bc179b7af/images/9e56d13142a60bbde4d56358523733aab29046e516de2076f3787377277fe713.png",
+      "usage": "Use this as the absolute background image inside the AI Insights Modal or Drawer, setting opacity to 30% or using CSS mix-blend-mode to give a 'computational' aesthetic behind the text."
+    },
+    "user_avatar": {
+      "url": "https://images.unsplash.com/photo-1643656090647-ba85185222b4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODh8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBwb3J0cmFpdCUyMHBlcnNvbnxlbnwwfHx8fDE3NzYzMzc5MDN8MA&ixlib=rb-4.1.0&q=85",
+      "usage": "Placeholder for the logged-in user profile avatar in the header or sidebar."
+    },
+    "brand_logo": {
+      "url": "https://images.unsplash.com/photo-1770660332921-17da4e20c247?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDR8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwZ2VvbWV0cmljJTIwYnJhbmQlMjBsb2dvfGVufDB8fHx8MTc3NjMzNzkwM3ww&ixlib=rb-4.1.0&q=85",
+      "usage": "Optional subtle geometric logo for the sidebar header. If used, apply grayscale and high contrast filters."
+    }
+  },
+  "instructions_to_main_agent": [
+    "Install Google Fonts: Outfit, Manrope, and JetBrains Mono.",
+    "Install @phosphor-icons/react for icons.",
+    "Implement the UI using a stark, minimalist Swiss aesthetic. Rely on whitespace (p-6 to p-10) and thin 1px borders instead of shadows to delineate sections.",
+    "Do NOT use Inter for any typography. Stick strictly to Outfit (Headings), Manrope (Body), and JetBrains Mono (Data/Numbers).",
+    "Data visualization is critical: Utilize Recharts. The bar chart must show Monthly Trends and the pie chart must show Expense Breakdown. Stick to monochrome/grayscale for the charts, using the Accent colors ONLY for status indicators or the primary CTA.",
+    "The 'Analyze My Finances' button is the core feature. Make it highly prominent (perhaps cobalt blue or stark black) and place it optimally in the sticky header or top of the dashboard.",
+    "When displaying the AI Insights, render the final human-readable suggestions prominently, and place the raw reasoning in a collapsible accordion (using JetBrains Mono to look like terminal logs).",
+    "Build the dashboard mobile-first, but strictly enforce the 'Control Room' bento grid on desktop (lg:grid-cols-12).",
+    "Include 'data-testid' on all interactive elements (buttons, inputs, transaction list rows, chart wrappers)."
+  ]
+}
