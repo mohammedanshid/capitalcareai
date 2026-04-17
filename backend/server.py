@@ -365,11 +365,59 @@ async def get_summary(user: dict = Depends(get_current_user)):
     total_expenses = sum(t["amount"] for t in transactions if t["type"] == "expense")
     balance = total_income - total_expenses
     
+    # Build monthly data for sparklines (last 6 months)
+    from collections import defaultdict
+    monthly = defaultdict(lambda: {"income": 0, "expenses": 0})
+    for t in transactions:
+        month_key = t["date"][:7]  # "YYYY-MM"
+        if t["type"] == "income":
+            monthly[month_key]["income"] += t["amount"]
+        else:
+            monthly[month_key]["expenses"] += t["amount"]
+    
+    sorted_months = sorted(monthly.keys())[-6:]
+    sparkline_income = [round(monthly[m]["income"], 2) for m in sorted_months]
+    sparkline_expenses = [round(monthly[m]["expenses"], 2) for m in sorted_months]
+    sparkline_profit = [round(monthly[m]["income"] - monthly[m]["expenses"], 2) for m in sorted_months]
+    sparkline_cashflow = sparkline_profit  # alias
+    
+    # Trends (compare last two months)
+    def calc_trend(values):
+        if len(values) < 2 or values[-2] == 0:
+            return 0
+        return round(((values[-1] - values[-2]) / abs(values[-2])) * 100, 1)
+    
+    # Current month cash flow
+    now_month = datetime.now(timezone.utc).strftime("%Y-%m")
+    current_income = monthly[now_month]["income"]
+    current_expenses = monthly[now_month]["expenses"]
+    cash_flow = round(current_income - current_expenses, 2)
+    
+    # Monthly breakdown for line chart
+    monthly_series = []
+    for m in sorted_months:
+        monthly_series.append({
+            "month": m,
+            "income": round(monthly[m]["income"], 2),
+            "expenses": round(monthly[m]["expenses"], 2),
+            "profit": round(monthly[m]["income"] - monthly[m]["expenses"], 2),
+        })
+    
     return {
         "total_income": round(total_income, 2),
         "total_expenses": round(total_expenses, 2),
         "balance": round(balance, 2),
-        "transaction_count": len(transactions)
+        "cash_flow": cash_flow,
+        "transaction_count": len(transactions),
+        "sparkline_income": sparkline_income,
+        "sparkline_expenses": sparkline_expenses,
+        "sparkline_profit": sparkline_profit,
+        "sparkline_cashflow": sparkline_cashflow,
+        "trend_income": calc_trend(sparkline_income),
+        "trend_expenses": calc_trend(sparkline_expenses),
+        "trend_profit": calc_trend(sparkline_profit),
+        "trend_cashflow": calc_trend(sparkline_cashflow),
+        "monthly_series": monthly_series,
     }
 
 @api_router.post("/analyze")
@@ -512,6 +560,24 @@ INSIGHTS:
     except Exception as e:
         logging.error(f"AI analysis error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to analyze finances: {str(e)}")
+
+
+@api_router.get("/analyze/latest")
+async def get_latest_analysis(user: dict = Depends(get_current_user)):
+    """Get the most recent AI analysis for the sidebar panel"""
+    analysis = await db.ai_analyses.find(
+        {"user_id": user["id"]},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(1).to_list(1)
+    
+    if not analysis:
+        return {"has_analysis": False}
+    
+    return {
+        "has_analysis": True,
+        "insights": analysis[0].get("insights", ""),
+        "created_at": analysis[0].get("created_at", ""),
+    }
 
 
 # ============== CATEGORIES MANAGEMENT ==============

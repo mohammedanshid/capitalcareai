@@ -179,7 +179,7 @@ class TestTransactions:
 
 
 class TestDashboard:
-    """Dashboard summary tests"""
+    """Dashboard summary tests - Iteration 3: KPI cards with sparklines and trends"""
     
     @pytest.fixture(autouse=True)
     def setup(self):
@@ -200,6 +200,77 @@ class TestDashboard:
         assert "balance" in data
         assert "transaction_count" in data
         print(f"SUCCESS: Dashboard summary - Income: ${data['total_income']}, Expenses: ${data['total_expenses']}, Balance: ${data['balance']}")
+    
+    def test_dashboard_summary_sparklines(self):
+        """Test dashboard summary returns sparkline data for KPI cards"""
+        response = self.session.get(f"{BASE_URL}/api/dashboard/summary")
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Verify sparkline arrays exist
+        assert "sparkline_income" in data, "Missing sparkline_income"
+        assert "sparkline_expenses" in data, "Missing sparkline_expenses"
+        assert "sparkline_profit" in data, "Missing sparkline_profit"
+        assert "sparkline_cashflow" in data, "Missing sparkline_cashflow"
+        
+        # Verify they are lists
+        assert isinstance(data["sparkline_income"], list), "sparkline_income should be a list"
+        assert isinstance(data["sparkline_expenses"], list), "sparkline_expenses should be a list"
+        assert isinstance(data["sparkline_profit"], list), "sparkline_profit should be a list"
+        assert isinstance(data["sparkline_cashflow"], list), "sparkline_cashflow should be a list"
+        
+        print(f"SUCCESS: Sparkline data present - income: {len(data['sparkline_income'])} points, expenses: {len(data['sparkline_expenses'])} points")
+    
+    def test_dashboard_summary_trends(self):
+        """Test dashboard summary returns trend percentages for KPI cards"""
+        response = self.session.get(f"{BASE_URL}/api/dashboard/summary")
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Verify trend values exist
+        assert "trend_income" in data, "Missing trend_income"
+        assert "trend_expenses" in data, "Missing trend_expenses"
+        assert "trend_profit" in data, "Missing trend_profit"
+        assert "trend_cashflow" in data, "Missing trend_cashflow"
+        
+        # Verify they are numbers
+        assert isinstance(data["trend_income"], (int, float)), "trend_income should be a number"
+        assert isinstance(data["trend_expenses"], (int, float)), "trend_expenses should be a number"
+        assert isinstance(data["trend_profit"], (int, float)), "trend_profit should be a number"
+        assert isinstance(data["trend_cashflow"], (int, float)), "trend_cashflow should be a number"
+        
+        print(f"SUCCESS: Trend data present - income: {data['trend_income']}%, expenses: {data['trend_expenses']}%, profit: {data['trend_profit']}%, cashflow: {data['trend_cashflow']}%")
+    
+    def test_dashboard_summary_monthly_series(self):
+        """Test dashboard summary returns monthly series for primary line chart"""
+        response = self.session.get(f"{BASE_URL}/api/dashboard/summary")
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Verify monthly_series exists and is a list
+        assert "monthly_series" in data, "Missing monthly_series"
+        assert isinstance(data["monthly_series"], list), "monthly_series should be a list"
+        
+        # If there's data, verify structure
+        if len(data["monthly_series"]) > 0:
+            first_month = data["monthly_series"][0]
+            assert "month" in first_month, "monthly_series item missing 'month'"
+            assert "income" in first_month, "monthly_series item missing 'income'"
+            assert "expenses" in first_month, "monthly_series item missing 'expenses'"
+            assert "profit" in first_month, "monthly_series item missing 'profit'"
+            print(f"SUCCESS: Monthly series has {len(data['monthly_series'])} months with income/expenses/profit data")
+        else:
+            print("INFO: Monthly series is empty (no transactions yet)")
+    
+    def test_dashboard_summary_cash_flow(self):
+        """Test dashboard summary returns cash_flow field"""
+        response = self.session.get(f"{BASE_URL}/api/dashboard/summary")
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert "cash_flow" in data, "Missing cash_flow"
+        assert isinstance(data["cash_flow"], (int, float)), "cash_flow should be a number"
+        print(f"SUCCESS: Cash flow present: ${data['cash_flow']}")
 
 
 class TestCategories:
@@ -397,7 +468,7 @@ class TestExport:
 
 
 class TestAIAnalysis:
-    """AI Analysis endpoint test"""
+    """AI Analysis endpoint tests - Iteration 3: includes /api/analyze/latest for sidebar"""
     
     @pytest.fixture(autouse=True)
     def setup(self):
@@ -421,6 +492,23 @@ class TestAIAnalysis:
             print(f"SUCCESS: AI analysis completed - insights length: {len(data['insights'])}")
         else:
             print("INFO: AI analysis returned 400 (likely no transactions)")
+    
+    def test_get_latest_analysis(self):
+        """Test /api/analyze/latest endpoint for Quick Insights sidebar"""
+        response = self.session.get(f"{BASE_URL}/api/analyze/latest")
+        assert response.status_code == 200, f"Latest analysis failed: {response.text}"
+        data = response.json()
+        
+        # Should always have has_analysis field
+        assert "has_analysis" in data, "Missing has_analysis field"
+        assert isinstance(data["has_analysis"], bool), "has_analysis should be boolean"
+        
+        if data["has_analysis"]:
+            assert "insights" in data, "Missing insights when has_analysis is true"
+            assert "created_at" in data, "Missing created_at when has_analysis is true"
+            print(f"SUCCESS: Latest analysis found - insights length: {len(data.get('insights', ''))}")
+        else:
+            print("INFO: No previous analysis found (has_analysis=false)")
 
 
 if __name__ == "__main__":
