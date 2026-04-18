@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
-import { House, CurrencyInr, BookOpen, ChartBar, Gear, Moon, Sun, SignOut, UserCircle, Plus, Minus } from '@phosphor-icons/react';
+import { House, CurrencyInr, BookOpen, ChartBar, Gear, Moon, Sun, SignOut, UserCircle, Plus, Minus, Robot } from '@phosphor-icons/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatINR } from '../../utils/inr';
+import { AlertsPanel } from '../../components/AlertsPanel';
+import { ForecastWidget } from '../../components/ForecastWidget';
+import { AIChatDrawer } from '../../components/AIChatDrawer';
 import { toast } from 'sonner';
 import axios from 'axios';
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -21,6 +24,7 @@ export const ShopDashboard = () => {
   const [sheet, setSheet] = useState(null); // 'credit' | 'debit' | null
   const [form, setForm] = useState({ amount:'', category:'Sales', note:'' });
   const [submitting, setSubmitting] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => { fetch_(); }, []);
   const fetch_ = async () => { try { const { data } = await axios.get(`${API}/api/shop/dashboard`, { withCredentials: true }); setD(data); } catch {} finally { setLoading(false); } };
@@ -40,8 +44,9 @@ export const ShopDashboard = () => {
     <div className="min-h-screen pb-24" data-persona="shop_owner" style={{background:'var(--p-bg)'}} data-testid="shop-dashboard">
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-[var(--nav-bg)] border-b border-[var(--p-border)]">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <h1 className="text-lg font-extrabold text-[var(--p-text)] font-['Outfit']">Fin<span className="text-[#EF9F27]">Flow</span></h1>
+          <h1 className="text-lg font-extrabold text-[var(--p-text)] font-['Outfit']">Capital Care <span className="text-[#EF9F27]">AI</span></h1>
           <div className="flex items-center gap-1.5">
+            <button onClick={()=>setChatOpen(true)} className="p-2 rounded-md text-[var(--p-text-muted)] hover:text-[#EF9F27]" data-testid="open-chat" title="AI Assistant"><Robot size={16}/></button>
             <button onClick={toggleTheme} className="p-2 rounded-md text-[var(--p-text-muted)] hover:bg-[var(--p-border-subtle)]" data-testid="theme-toggle">{theme==='dark'?<Sun size={16}/>:<Moon size={16}/>}</button>
             <button onClick={async()=>{await setPersona(null);nav('/persona?switch=1');}} className="p-2 rounded-md text-[var(--p-text-muted)]" data-testid="switch-persona"><UserCircle size={16}/></button>
             <button onClick={()=>{logout();nav('/login');}} className="p-2 rounded-md text-[var(--p-text-muted)]" data-testid="logout-button"><SignOut size={16}/></button>
@@ -125,9 +130,18 @@ export const ShopDashboard = () => {
                 ))}
               </div>
             )}
+
+            {/* Alerts */}
+            <AlertsPanel persona="shop_owner" />
+
+            {/* Forecast */}
+            <ForecastWidget persona="shop_owner" />
           </>
         ) : null}
       </main>
+
+      {/* AI Chat Drawer */}
+      <AIChatDrawer isOpen={chatOpen} onClose={() => setChatOpen(false)} persona="shop_owner" />
 
       {/* Quick Entry Bar */}
       <div className="fixed bottom-14 left-0 right-0 z-50 bg-[var(--p-surface)] border-t-2 border-[var(--p-border)] px-4 py-2" data-testid="quick-entry-bar">

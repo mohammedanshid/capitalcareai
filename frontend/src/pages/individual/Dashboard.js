@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
-import { House, Receipt, Target, ChartLine, UserCircle, Moon, Sun, SignOut, Sparkle } from '@phosphor-icons/react';
+import { House, Receipt, Target, ChartLine, UserCircle, Moon, Sun, SignOut, Sparkle, Robot, DownloadSimple } from '@phosphor-icons/react';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area } from 'recharts';
 import { formatINR } from '../../utils/inr';
+import { AlertsPanel } from '../../components/AlertsPanel';
+import { ForecastWidget } from '../../components/ForecastWidget';
+import { AIChatDrawer } from '../../components/AIChatDrawer';
 import axios from 'axios';
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -17,6 +20,7 @@ export const IndividualDashboard = () => {
   const [d, setD] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('home');
+  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => { fetch_(); }, []);
   const fetch_ = async () => { try { const { data } = await axios.get(`${API}/api/individual/dashboard`, { withCredentials: true }); setD(data); } catch {} finally { setLoading(false); } };
@@ -38,8 +42,10 @@ export const IndividualDashboard = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-[var(--nav-bg)] border-b border-[var(--p-border)]">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-[var(--p-text)] font-['Outfit']">Fin<span className="text-[#1D9E75]">Flow</span></h1>
+          <h1 className="text-lg font-bold text-[var(--p-text)] font-['Outfit']">Capital Care <span className="text-[#1D9E75]">AI</span></h1>
           <div className="flex items-center gap-1.5">
+            <button onClick={()=>setChatOpen(true)} className="p-2 rounded-lg text-[var(--p-text-muted)] hover:bg-[var(--p-border-subtle)] hover:text-[#1D9E75]" data-testid="open-chat" title="AI Assistant"><Robot size={16}/></button>
+            <div className="relative group"><button className="p-2 rounded-lg text-[var(--p-text-muted)] hover:bg-[var(--p-border-subtle)]" data-testid="export-button" title="Export"><DownloadSimple size={16}/></button><div className="absolute right-0 top-full mt-1 w-32 bg-[var(--p-surface)] border border-[var(--p-border)] rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden"><button onClick={async()=>{const r=await axios.get(`${API}/api/export/individual/csv`,{withCredentials:true,responseType:'blob'});const u=window.URL.createObjectURL(new Blob([r.data]));const l=document.createElement('a');l.href=u;l.download='transactions.csv';l.click();}} className="w-full text-left px-3 py-2 text-xs text-[var(--p-text-secondary)] hover:bg-[var(--p-border-subtle)]" data-testid="export-csv">Export CSV</button><button onClick={async()=>{const r=await axios.get(`${API}/api/export/individual/pdf`,{withCredentials:true,responseType:'blob'});const u=window.URL.createObjectURL(new Blob([r.data]));const l=document.createElement('a');l.href=u;l.download='report.pdf';l.click();}} className="w-full text-left px-3 py-2 text-xs text-[var(--p-text-secondary)] hover:bg-[var(--p-border-subtle)]" data-testid="export-pdf">Export PDF</button></div></div>
             <button onClick={toggleTheme} className="p-2 rounded-lg text-[var(--p-text-muted)] hover:bg-[var(--p-border-subtle)]" data-testid="theme-toggle">{theme==='dark'?<Sun size={16}/>:<Moon size={16}/>}</button>
             <button onClick={async()=>{await setPersona(null);nav('/persona?switch=1');}} className="p-2 rounded-lg text-[var(--p-text-muted)] hover:bg-[var(--p-border-subtle)]" data-testid="switch-persona" title="Switch mode"><UserCircle size={16}/></button>
             <button onClick={()=>{logout();nav('/login');}} className="p-2 rounded-lg text-[var(--p-text-muted)] hover:bg-[var(--p-border-subtle)]" data-testid="logout-button"><SignOut size={16}/></button>
@@ -125,9 +131,18 @@ export const IndividualDashboard = () => {
                 })}
               </div>
             )}
+
+            {/* Alerts */}
+            <AlertsPanel persona="individual" />
+
+            {/* Forecast */}
+            <ForecastWidget persona="individual" />
           </>
         ) : <p className="text-center text-[var(--p-text-muted)] py-10">No data yet. Add your first transaction!</p>}
       </main>
+
+      {/* AI Chat Drawer */}
+      <AIChatDrawer isOpen={chatOpen} onClose={() => setChatOpen(false)} persona="individual" />
 
       {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[var(--nav-bg)] backdrop-blur-xl border-t border-[var(--p-border)]" data-testid="bottom-nav">

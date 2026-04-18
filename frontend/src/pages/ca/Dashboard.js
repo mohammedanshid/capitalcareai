@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
-import { House, Users, ListChecks, ChartBar, Gear, Moon, Sun, SignOut, UserCircle, Plus, MagnifyingGlass, Warning, CheckCircle, Clock } from '@phosphor-icons/react';
+import { House, Users, ListChecks, ChartBar, Gear, Moon, Sun, SignOut, UserCircle, Plus, MagnifyingGlass, Warning, CheckCircle, Clock, Robot } from '@phosphor-icons/react';
+import { AlertsPanel } from '../../components/AlertsPanel';
+import { AIChatDrawer } from '../../components/AIChatDrawer';
 import { toast } from 'sonner';
 import axios from 'axios';
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -18,6 +20,7 @@ export const CADashboard = () => {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name:'', business_type:'', status:'on_track', next_deadline:'' });
+  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => { fetch_(); }, []);
   const fetch_ = async () => { try { const { data } = await axios.get(`${API}/api/ca/dashboard`, { withCredentials: true }); setD(data); } catch {} finally { setLoading(false); } };
@@ -36,8 +39,9 @@ export const CADashboard = () => {
     <div className="min-h-screen bg-[var(--p-bg)] pb-20" data-persona="ca" data-testid="ca-dashboard">
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-[var(--nav-bg)] border-b border-[var(--p-border)]">
         <div className="max-w-5xl mx-auto px-4 h-12 flex items-center justify-between">
-          <h1 className="text-base font-bold text-[var(--p-text)] font-['Outfit']">Fin<span className="text-[#185FA5]">Flow</span> <span className="text-[10px] font-normal text-[var(--p-text-muted)]">CA</span></h1>
+          <h1 className="text-base font-bold text-[var(--p-text)] font-['Outfit']">Capital Care <span className="text-[#185FA5]">AI</span> <span className="text-[10px] font-normal text-[var(--p-text-muted)]">CA</span></h1>
           <div className="flex items-center gap-1">
+            <button onClick={()=>setChatOpen(true)} className="p-1.5 rounded text-[var(--p-text-muted)] hover:text-[#185FA5]" data-testid="open-chat"><Robot size={14}/></button>
             <button onClick={toggleTheme} className="p-1.5 rounded text-[var(--p-text-muted)] hover:bg-[var(--p-border-subtle)]" data-testid="theme-toggle">{theme==='dark'?<Sun size={14}/>:<Moon size={14}/>}</button>
             <button onClick={async()=>{await setPersona(null);nav('/persona?switch=1');}} className="p-1.5 rounded text-[var(--p-text-muted)]" data-testid="switch-persona"><UserCircle size={14}/></button>
             <button onClick={()=>{logout();nav('/login');}} className="p-1.5 rounded text-[var(--p-text-muted)]" data-testid="logout-button"><SignOut size={14}/></button>
@@ -96,9 +100,15 @@ export const CADashboard = () => {
                 })
               }
             </div>
+
+            {/* Alerts */}
+            <AlertsPanel persona="ca" />
           </>
         ) : null}
       </main>
+
+      {/* AI Chat Drawer */}
+      <AIChatDrawer isOpen={chatOpen} onClose={() => setChatOpen(false)} persona="ca" />
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--nav-bg)] backdrop-blur-xl border-t border-[var(--p-border)]" data-testid="bottom-nav">
         <div className="flex items-center justify-around h-12 max-w-5xl mx-auto">

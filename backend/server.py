@@ -320,7 +320,7 @@ async def ai_insights(request: Request, u: dict = Depends(current_user)):
         "ca": f"You are an expert Indian Chartered Accountant advisor. Analyze:\n{context}\nProvide 5 professional recommendations on compliance, tax optimization, and client management."
     }
     try:
-        chat = LlmChat(api_key=os.environ.get('EMERGENT_LLM_KEY'), session_id=f"finflow_{u['_id']}_{datetime.now(timezone.utc).timestamp()}", system_message="You are a professional Indian financial advisor.")
+        chat = LlmChat(api_key=os.environ.get('EMERGENT_LLM_KEY'), session_id=f"capitalcare_{u['_id']}_{datetime.now(timezone.utc).timestamp()}", system_message="You are a professional Indian financial advisor.")
         chat.with_model("openai", "gpt-5.2")
         resp = await chat.send_message(UserMessage(text=prompts.get(persona, prompts["individual"])))
         # Store
@@ -334,6 +334,182 @@ async def ai_latest(u: dict = Depends(current_user)):
     doc = await db.ai_insights.find({"user_id": u["_id"]}, {"_id": 0}).sort("created_at", -1).limit(1).to_list(1)
     if not doc: return {"has_insights": False}
     return {"has_insights": True, "insights": doc[0]["insights"], "created_at": doc[0]["created_at"]}
+
+# ═══════════════════ AI CHAT ASSISTANT ═══════════════════
+@api.post("/ai/chat")
+async def ai_chat(request: Request, u: dict = Depends(current_user)):
+    body = await request.json()
+    message = body.get("message", "")
+    persona = body.get("persona", "individual")
+    if not message: raise HTTPException(400, "Message required")
+    
+    system_msgs = {
+        "individual": "You are Capital Care AI, a warm and encouraging personal finance coach for Indian users. Help with budgeting, savings goals, investment basics, and tax deductions (80C, 80D, HRA). Use INR amounts. Keep responses concise (3-5 sentences).",
+        "shop_owner": "You are Capital Care AI, a sharp business advisor for Indian shop owners. Help with inventory management, pricing strategies, cash flow optimization, GST compliance, and revenue growth tactics. Use INR amounts. Keep responses concise and actionable.",
+        "ca": "You are Capital Care AI, an expert Indian CA assistant. Help with tax law interpretation (Income Tax Act, GST Act), compliance deadlines, TDS calculations, ITR filing strategy, and client advisory. Be precise and professional. Cite sections when relevant."
+    }
+    try:
+        chat = LlmChat(api_key=os.environ.get('EMERGENT_LLM_KEY'), session_id=f"chat_{u['_id']}_{datetime.now(timezone.utc).timestamp()}", system_message=system_msgs.get(persona, system_msgs["individual"]))
+        chat.with_model("openai", "gpt-5.2")
+        resp = await chat.send_message(UserMessage(text=message))
+        # Store chat history
+        await db.ai_chat_history.insert_one({"user_id": u["_id"], "persona": persona, "message": message, "response": resp.strip(), "created_at": datetime.now(timezone.utc).isoformat()})
+        return {"response": resp.strip()}
+    except Exception as e:
+        raise HTTPException(500, f"Chat error: {str(e)}")
+
+@api.get("/ai/chat-history")
+async def ai_chat_history(u: dict = Depends(current_user)):
+    history = await db.ai_chat_history.find({"user_id": u["_id"]}, {"_id": 0}).sort("created_at", -1).limit(20).to_list(20)
+    return list(reversed(history))
+
+# ═══════════════════ CASH FLOW FORECAST ═══════════════════
+@api.get("/forecast/{persona}")
+async def cash_flow_forecast(persona: str, u: dict = Depends(current_user)):
+    if persona == "individual":
+        txns = await db.ind_transactions.find({"user_id": u["_id"]}, {"_id": 0}).to_list(10000)
+        monthly = defaultdict(lambda: {"income": 0, "expense": 0})
+        for t in txns:
+            monthly[t["date"][:7]][t["type"]] += t["amount"]
+        months = sorted(monthly.keys())
+        if len(months) < 1:
+            return {"forecast": [], "avg_income": 0, "avg_expense": 0}
+        avg_inc = sum(monthly[m]["income"] for m in months) / max(len(months), 1)
+        avg_exp = sum(monthly[m]["expense"] for m in months) / max(len(months), 1)
+        # Project next 3 months
+        forecast = []
+        today = datetime.now(timezone.utc)
+        for i in range(1, 4):
+            d = today + timedelta(days=30*i)
+            forecast.append({"month": d.strftime("%Y-%m"), "projected_income": round(avg_inc, 2), "projected_expenses": round(avg_exp, 2), "projected_savings": round(avg_inc - avg_exp, 2)})
+        return {"forecast": forecast, "avg_income": round(avg_inc, 2), "avg_expense": round(avg_exp, 2)}
+    
+    elif persona == "shop_owner":
+        entries = await db.shop_ledger.find({"user_id": u["_id"]}, {"_id": 0}).to_list(10000)
+        daily = defaultdict(lambda: {"credit": 0, "debit": 0})
+        for e in entries:
+            daily[e.get("date", "")]["credit" if e["entry_type"] == "credit" else "debit"] += e["amount"]
+        days = sorted(daily.keys())
+        if len(days) < 1:
+            return {"forecast_30": 0, "forecast_60": 0, "forecast_90": 0, "daily_avg_net": 0, "series": []}
+        daily_nets = [daily[d]["credit"] - daily[d]["debit"] for d in days]
+        avg_net = sum(daily_nets) / max(len(daily_nets), 1)
+        return {
+            "forecast_30": round(avg_net * 30, 2), "forecast_60": round(avg_net * 60, 2), "forecast_90": round(avg_net * 90, 2),
+            "daily_avg_net": round(avg_net, 2),
+            "series": [{"day": i+1, "projected": round(avg_net * (i+1), 2)} for i in range(90)]
+        }
+    return {"forecast": []}
+
+# ═══════════════════ PROACTIVE ALERTS ═══════════════════
+@api.get("/alerts/{persona}")
+async def get_alerts(persona: str, u: dict = Depends(current_user)):
+    alerts = []
+    if persona == "individual":
+        txns = await db.ind_transactions.find({"user_id": u["_id"]}, {"_id": 0}).to_list(10000)
+        # Category spending analysis
+        cats = defaultdict(list)
+        for t in txns:
+            if t["type"] == "expense":
+                cats[t["category"]].append(t["amount"])
+        for cat, amounts in cats.items():
+            if len(amounts) >= 3:
+                avg = sum(amounts[:-1]) / (len(amounts) - 1)
+                if amounts[-1] > avg * 1.5 and avg > 0:
+                    alerts.append({"type": "spending_spike", "severity": "warning", "message": f"Your last {cat} expense (₹{amounts[-1]:,.0f}) is {((amounts[-1]/avg - 1)*100):.0f}% above your average"})
+        # Savings rate
+        inc = sum(t["amount"] for t in txns if t["type"] == "income")
+        exp = sum(t["amount"] for t in txns if t["type"] == "expense")
+        if inc > 0 and (inc - exp) / inc < 0.2:
+            alerts.append({"type": "low_savings", "severity": "info", "message": f"Your savings rate is {((inc-exp)/inc*100):.0f}%. Aim for at least 20% to build an emergency fund."})
+        # Goals behind schedule
+        goals = await db.ind_goals.find({"user_id": u["_id"]}, {"_id": 0}).to_list(100)
+        for g in goals:
+            if g.get("deadline") and g["target"] > 0:
+                pct = g["saved"] / g["target"] * 100
+                if pct < 50:
+                    alerts.append({"type": "goal_behind", "severity": "info", "message": f"'{g['name']}' is only {pct:.0f}% funded. Consider increasing your monthly savings."})
+    
+    elif persona == "shop_owner":
+        pending = await db.shop_pending.find({"user_id": u["_id"]}, {"_id": 0}).to_list(100)
+        overdue_count = len([p for p in pending if p.get("days_overdue", 0) > 7])
+        if overdue_count > 0:
+            total_overdue = sum(p["amount"] for p in pending if p.get("days_overdue", 0) > 7)
+            alerts.append({"type": "overdue_payments", "severity": "warning", "message": f"{overdue_count} payments overdue totaling ₹{total_overdue:,.0f}. Send reminders today."})
+        entries = await db.shop_ledger.find({"user_id": u["_id"]}, {"_id": 0}).to_list(10000)
+        # Weekday analysis
+        from collections import Counter
+        weekday_rev = Counter()
+        for e in entries:
+            if e["entry_type"] == "credit":
+                try:
+                    dt = datetime.strptime(e["date"], "%Y-%m-%d")
+                    weekday_rev[dt.strftime("%A")] += e["amount"]
+                except: pass
+        if weekday_rev:
+            avg_rev = sum(weekday_rev.values()) / max(len(weekday_rev), 1)
+            for day, rev in weekday_rev.items():
+                if rev < avg_rev * 0.6:
+                    alerts.append({"type": "low_day", "severity": "info", "message": f"{day} sales are {((1 - rev/avg_rev)*100):.0f}% below average. Consider a special offer."})
+    
+    elif persona == "ca":
+        tasks = await db.ca_tasks.find({"user_id": u["_id"], "status": {"$in": ["pending", "overdue"]}}, {"_id": 0}).to_list(1000)
+        if len(tasks) > 5:
+            alerts.append({"type": "task_overload", "severity": "warning", "message": f"You have {len(tasks)} pending tasks. Prioritize by deadline."})
+        clients = await db.ca_clients.find({"user_id": u["_id"], "status": "overdue"}, {"_id": 0}).to_list(100)
+        if clients:
+            names = ", ".join([c["name"] for c in clients[:3]])
+            alerts.append({"type": "client_overdue", "severity": "warning", "message": f"Clients overdue: {names}. Follow up immediately."})
+    
+    if not alerts:
+        alerts.append({"type": "all_good", "severity": "success", "message": "Everything looks great! Keep up the good work."})
+    return alerts
+
+# ═══════════════════ EXPORT PDF ═══════════════════
+@api.get("/export/individual/pdf")
+async def export_ind_pdf(u: dict = Depends(current_user)):
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib import colors
+    from reportlab.lib.units import inch
+    txns = await db.ind_transactions.find({"user_id": u["_id"]}, {"_id": 0}).sort("date", -1).to_list(1000)
+    inc = sum(t["amount"] for t in txns if t["type"] == "income")
+    exp = sum(t["amount"] for t in txns if t["type"] == "expense")
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=letter)
+    styles = getSampleStyleSheet()
+    elems = []
+    elems.append(Paragraph("Capital Care AI — Financial Report", styles['Title']))
+    elems.append(Paragraph(f"Generated: {datetime.now().strftime('%B %d, %Y')}", styles['Normal']))
+    elems.append(Spacer(1, 0.3*inch))
+    summary = [["Metric","Amount"],["Total Income",f"₹{inc:,.2f}"],["Total Expenses",f"₹{exp:,.2f}"],["Net Savings",f"₹{inc-exp:,.2f}"]]
+    t = Table(summary, colWidths=[3*inch, 2*inch])
+    t.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),colors.HexColor('#0F172A')),('TEXTCOLOR',(0,0),(-1,0),colors.white),('GRID',(0,0),(-1,-1),0.5,colors.grey),('FONTNAME',(0,0),(-1,0),'Helvetica-Bold')]))
+    elems.append(t)
+    elems.append(Spacer(1, 0.3*inch))
+    elems.append(Paragraph("Transactions", styles['Heading2']))
+    rows = [["Date","Type","Category","Amount","Note"]]
+    for tx in txns[:50]:
+        rows.append([tx["date"],tx["type"].title(),tx["category"],f"₹{tx['amount']:,.2f}",tx.get("description","")[:25]])
+    t2 = Table(rows, colWidths=[1.1*inch,0.7*inch,1.1*inch,1*inch,2*inch])
+    t2.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),colors.HexColor('#0F172A')),('TEXTCOLOR',(0,0),(-1,0),colors.white),('GRID',(0,0),(-1,-1),0.5,colors.grey),('FONTSIZE',(0,0),(-1,-1),8)]))
+    elems.append(t2)
+    doc.build(elems)
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=capital_care_report_{datetime.now().strftime('%Y%m%d')}.pdf"})
+
+@api.get("/export/individual/csv")
+async def export_ind_csv(u: dict = Depends(current_user)):
+    txns = await db.ind_transactions.find({"user_id": u["_id"]}, {"_id": 0}).sort("date", -1).to_list(10000)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Date","Type","Category","Amount","Description"])
+    for t in txns:
+        writer.writerow([t["date"],t["type"].title(),t["category"],f"{t['amount']:.2f}",t.get("description","")])
+    output.seek(0)
+    return StreamingResponse(iter([output.getvalue()]), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename=transactions_{datetime.now().strftime('%Y%m%d')}.csv"})
+
 
 # ═══════════════════ SMS PARSER ═══════════════════
 @api.post("/sms/parse")
@@ -376,13 +552,13 @@ async def startup():
     await db.ca_clients.create_index("user_id")
     await db.ca_tasks.create_index("user_id")
     # Seed admin
-    admin_email = os.environ.get("ADMIN_EMAIL", "admin@finflow.com")
+    admin_email = os.environ.get("ADMIN_EMAIL", "admin@capitalcare.com")
     admin_pw = os.environ.get("ADMIN_PASSWORD", "Admin@123")
     if not await db.users.find_one({"email": admin_email}):
         await db.users.insert_one({"email": admin_email, "password_hash": hash_pw(admin_pw), "name": "Admin", "persona": None, "created_at": datetime.now(timezone.utc)})
     # Write creds
     Path("/app/memory").mkdir(exist_ok=True)
-    Path("/app/memory/test_credentials.md").write_text(f"# FinFlow Credentials\n- Email: {admin_email}\n- Password: {admin_pw}\n- Endpoints: /api/auth/login, /api/auth/register, /api/persona/select\n")
+    Path("/app/memory/test_credentials.md").write_text(f"# Capital Care AI Credentials\n- Email: {admin_email}\n- Password: {admin_pw}\n- Endpoints: /api/auth/login, /api/auth/register, /api/persona/select\n")
 
 app.include_router(api)
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])

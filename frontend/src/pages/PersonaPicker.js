@@ -42,7 +42,7 @@ export const PersonaPicker = () => {
         </button>
       </div>
       <div className="text-center mb-10">
-        <p className="text-xs font-semibold tracking-widest uppercase text-[var(--p-text-muted)] mb-2">FinFlow</p>
+        <p className="text-xs font-semibold tracking-widest uppercase text-[var(--p-text-muted)] mb-2">Capital Care AI</p>
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[var(--p-text)] font-['Outfit'] mb-2">Your money, your way</h1>
         <p className="text-sm text-[var(--p-text-secondary)]">Choose how you manage your finances</p>
       </div>

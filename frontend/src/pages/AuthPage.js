@@ -33,7 +33,7 @@ export const AuthPage = () => {
               {theme === 'dark' ? <Sun size={18}/> : <Moon size={18}/>}
             </button>
           </div>
-          <p className="text-xs font-semibold text-[var(--p-primary)] tracking-widest uppercase mb-2">FinFlow</p>
+          <p className="text-xs font-semibold text-[var(--p-primary)] tracking-widest uppercase mb-2">Capital Care AI</p>
           <h1 className="text-3xl font-extrabold tracking-tight text-[var(--p-text)] font-['Outfit'] mb-1">{isLogin ? 'Welcome back' : 'Create account'}</h1>
           <p className="text-sm text-[var(--p-text-secondary)] mb-6">{isLogin ? 'Sign in to your account' : 'Start managing your finances'}</p>
           <form onSubmit={submit} className="space-y-3.5" data-testid={isLogin ? 'login-form' : 'register-form'}>
