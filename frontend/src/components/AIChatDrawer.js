@@ -8,7 +8,7 @@ export const AIChatDrawer = ({ isOpen, onClose, persona }) => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
-  const personaColor = persona === 'individual' ? '#1D9E75' : persona === 'shop_owner' ? '#EF9F27' : '#185FA5';
+  const personaColor = '#F4845F'; // Cashly coral
 
   useEffect(() => {
     if (isOpen) fetchHistory();

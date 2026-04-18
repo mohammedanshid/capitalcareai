@@ -11,7 +11,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { checkAuth(); }, []);
-
   const checkAuth = async () => {
     try { const { data } = await axios.get(`${API}/api/auth/me`, { withCredentials: true }); setUser(data); }
     catch { setUser(false); }
@@ -19,13 +18,22 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
-    try { const { data } = await axios.post(`${API}/api/auth/login`, { email, password }, { withCredentials: true }); setUser(data); return { success: true }; }
-    catch (e) { return { success: false, error: fmtErr(e.response?.data?.detail) }; }
+    try {
+      const { data } = await axios.post(`${API}/api/auth/login`, { email, password }, { withCredentials: true });
+      // Auto-set persona to individual
+      try { await axios.post(`${API}/api/persona/select`, { persona: 'individual' }, { withCredentials: true }); } catch {}
+      setUser({ ...data, persona: 'individual' });
+      return { success: true };
+    } catch (e) { return { success: false, error: fmtErr(e.response?.data?.detail) }; }
   };
 
   const register = async (name, email, password) => {
-    try { const { data } = await axios.post(`${API}/api/auth/register`, { name, email, password }, { withCredentials: true }); setUser(data); return { success: true }; }
-    catch (e) { return { success: false, error: fmtErr(e.response?.data?.detail) }; }
+    try {
+      const { data } = await axios.post(`${API}/api/auth/register`, { name, email, password }, { withCredentials: true });
+      try { await axios.post(`${API}/api/persona/select`, { persona: 'individual' }, { withCredentials: true }); } catch {}
+      setUser({ ...data, persona: 'individual' });
+      return { success: true };
+    } catch (e) { return { success: false, error: fmtErr(e.response?.data?.detail) }; }
   };
 
   const logout = async () => {
@@ -33,12 +41,5 @@ export const AuthProvider = ({ children }) => {
     setUser(false);
   };
 
-  const setPersona = async (persona) => {
-    try {
-      await axios.post(`${API}/api/persona/select`, { persona }, { withCredentials: true });
-      setUser(prev => ({ ...prev, persona }));
-    } catch {}
-  };
-
-  return <AuthContext.Provider value={{ user, loading, login, register, logout, setPersona }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, loading, login, register, logout }}>{children}</AuthContext.Provider>;
 };

@@ -4,53 +4,85 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%; --foreground: 222 47% 11%;
-    --card: 0 0% 100%; --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%; --popover-foreground: 222 47% 11%;
-    --primary: 222 47% 11%; --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%; --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%; --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%; --accent-foreground: 222 47% 11%;
-    --destructive: 0 84% 60%; --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 91%; --input: 214 32% 91%; --ring: 222 47% 11%;
-    --radius: 0.75rem;
-    /* Persona tokens */
-    --p-primary: #1D9E75; --p-primary-hover: #15805D;
-    --p-bg: #F8FAFC; --p-surface: #FFFFFF;
-    --p-text: #0F172A; --p-text-secondary: #475569; --p-text-muted: #94A3B8;
-    --p-border: #E2E8F0; --p-border-subtle: #F1F5F9;
-    --p-radius: 1rem;
-    --p-shadow: 0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04);
-    --nav-bg: rgba(255,255,255,0.85);
+    /* ─── Cashly Design Tokens ─── */
+    --cream: #F7F5F2;
+    --cream-light: #FAFAF8;
+    --coral: #F4845F;
+    --coral-hover: #E8734E;
+    --coral-light: #FFF0EB;
+    --dark: #1A1A1A;
+    --dark-hover: #2D2D2D;
+    --card: #FFFFFF;
+    --green: #4CAF85;
+    --green-light: #E8F5EE;
+    --red: #E74C3C;
+    --red-light: #FDE8E8;
+    --muted: #888884;
+    --text-primary: #1A1A1A;
+    --text-secondary: #555555;
+    --text-muted: #999999;
+    --border: #EEEEEA;
+    --shadow-card: 0 2px 12px rgba(0,0,0,0.06);
+    --shadow-hover: 0 8px 24px rgba(0,0,0,0.08);
+    --radius-card: 16px;
+    --radius-btn: 999px;
+
+    --background: 40 20% 97%;
+    --foreground: 0 0% 10%;
+    --card-bg: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    --primary: 16 88% 66%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 10% 94%;
+    --secondary-foreground: 0 0% 10%;
+    --muted-bg: 40 10% 94%;
+    --muted-foreground: 40 5% 50%;
+    --accent: 16 88% 66%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border-hsl: 40 15% 92%;
+    --input: 40 15% 92%;
+    --ring: 16 88% 66%;
+    --radius: 1rem;
   }
-  .dark {
-    --background: 222 47% 4%; --foreground: 210 40% 98%;
-    --card: 222 40% 7%; --card-foreground: 210 40% 98%;
-    --popover: 222 40% 7%; --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%; --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 14%; --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 14%; --muted-foreground: 215 20% 55%;
-    --accent: 217 33% 14%; --accent-foreground: 210 40% 98%;
-    --destructive: 0 72% 51%; --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 18%; --input: 217 33% 18%; --ring: 210 40% 80%;
-    --p-bg: #0F172A; --p-surface: #1E293B;
-    --p-text: #F8FAFC; --p-text-secondary: #CBD5E1; --p-text-muted: #64748B;
-    --p-border: #334155; --p-border-subtle: #1E293B;
-    --p-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    --nav-bg: rgba(15,23,42,0.85);
+
+  * { @apply border-[var(--border)]; }
+
+  body {
+    background: var(--cream-light);
+    color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
-  /* Persona overrides */
-  [data-persona="individual"] { --p-primary: #1D9E75; --p-primary-hover: #15805D; --p-radius: 1rem; }
-  [data-persona="shop_owner"] { --p-primary: #EF9F27; --p-primary-hover: #D97706; --p-radius: 0.5rem; }
-  [data-persona="ca"] { --p-primary: #185FA5; --p-primary-hover: #1E40AF; --p-radius: 0.25rem; }
-  * { @apply border-border; }
-  body { @apply bg-[var(--p-bg)] text-[var(--p-text)]; font-family: 'IBM Plex Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-  h1,h2,h3,h4,h5,h6 { font-family: 'Outfit', sans-serif; }
+
+  h1,h2,h3,h4,h5,h6 { font-family: 'Plus Jakarta Sans', sans-serif; }
 }
 
-::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--p-text-muted); border-radius: 3px; }
-@keyframes fade-up { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-.animate-fade-up { animation: fade-up 0.3s ease-out forwards; }
-.stagger-1{animation-delay:.05s}.stagger-2{animation-delay:.1s}.stagger-3{animation-delay:.15s}.stagger-4{animation-delay:.2s}
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
 
-@layer base { [data-debug-wrapper="true"] { display: contents !important; } }
+/* ─── Animations ─── */
+@keyframes fade-up { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fade-in { from { opacity:0; } to { opacity:1; } }
+.animate-fade-up { animation: fade-up 0.5s ease-out forwards; }
+.animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
+.stagger-1{animation-delay:.1s;opacity:0}.stagger-2{animation-delay:.2s;opacity:0}.stagger-3{animation-delay:.3s;opacity:0}.stagger-4{animation-delay:.4s;opacity:0}
+
+/* ─── Pill buttons ─── */
+.btn-coral { @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[var(--coral)] text-white font-semibold text-sm transition-all hover:bg-[var(--coral-hover)] hover:shadow-lg active:scale-[0.97]; }
+.btn-dark { @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[var(--dark)] text-white font-semibold text-sm transition-all hover:bg-[var(--dark-hover)] hover:shadow-lg active:scale-[0.97]; }
+.btn-outline { @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full border-2 border-[var(--dark)] text-[var(--dark)] font-semibold text-sm transition-all hover:bg-[var(--dark)] hover:text-white active:scale-[0.97]; }
+
+/* ─── Cards ─── */
+.cashly-card { @apply bg-white rounded-[16px] p-6; box-shadow: var(--shadow-card); transition: all 0.2s ease; }
+.cashly-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+
+@layer base {
+  [data-debug-wrapper="true"] { display: contents !important; }
+}

@@ -1,49 +1,45 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
-import { Eye, EyeSlash, Moon, Sun } from '@phosphor-icons/react';
+import { Eye, EyeSlash, ArrowLeft } from '@phosphor-icons/react';
 
 export const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false); const [error, setError] = useState(''); const [loading, setLoading] = useState(false);
-  const { login, register } = useAuth(); const { theme, toggleTheme } = useTheme(); const nav = useNavigate();
+  const { login, register } = useAuth(); const nav = useNavigate();
 
   const submit = async (e) => {
     e.preventDefault(); setError(''); setLoading(true);
     const r = isLogin ? await login(email, password) : (!name.trim() ? (setError('Name required'), setLoading(false), null) : await register(name, email, password));
     setLoading(false);
-    if (r?.success) nav('/persona'); else if (r) setError(r.error);
+    if (r?.success) nav('/dashboard'); else if (r) setError(r.error);
   };
 
+  const inputClass = "w-full h-12 bg-white border border-[var(--border)] rounded-2xl px-4 text-sm text-[var(--dark)] placeholder-[var(--muted)] focus:border-[var(--coral)] focus:ring-2 focus:ring-[var(--coral)]/20 outline-none transition-all";
+
   return (
-    <div className="min-h-screen flex" data-testid="auth-page">
-      <div className="hidden lg:flex lg:w-[45%] bg-gradient-to-br from-[#0F172A] to-[#1E293B] relative overflow-hidden items-end p-12 pb-16">
-        <div className="absolute inset-0 opacity-20" style={{backgroundImage:"url('https://images.unsplash.com/photo-1760865245986-2d863b76a847?w=800')", backgroundSize:'cover'}} />
-        <div className="relative z-10">
-          <h2 className="text-4xl font-extrabold text-white tracking-tight leading-tight mb-3 font-['Outfit']">Your money,<br/>your way.</h2>
-          <p className="text-white/50 text-sm max-w-xs">Three powerful dashboards for Individuals, Shop Owners, and Chartered Accountants.</p>
-        </div>
-      </div>
-      <div className="w-full lg:w-[55%] flex items-center justify-center p-6 sm:p-10 bg-[var(--p-bg)]">
-        <div className="w-full max-w-[380px]">
-          <div className="flex justify-end mb-6">
-            <button onClick={toggleTheme} className="p-2 rounded-lg text-[var(--p-text-muted)] hover:text-[var(--p-text)] hover:bg-[var(--p-border-subtle)] transition-all" data-testid="theme-toggle-auth">
-              {theme === 'dark' ? <Sun size={18}/> : <Moon size={18}/>}
-            </button>
+    <div className="min-h-screen bg-[var(--cream-light)] flex items-center justify-center p-4" data-testid="auth-page">
+      <div className="w-full max-w-[400px]">
+        <button onClick={() => nav('/')} className="flex items-center gap-1.5 text-sm text-[var(--muted)] hover:text-[var(--dark)] mb-8 transition-colors"><ArrowLeft size={16}/> Back to home</button>
+        <div className="cashly-card p-8">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="w-8 h-8 rounded-full bg-[var(--dark)] flex items-center justify-center"><span className="text-white text-xs font-bold">CC</span></div>
+            <span className="text-lg font-bold text-[var(--dark)]">Capital Care AI</span>
           </div>
-          <p className="text-xs font-semibold text-[var(--p-primary)] tracking-widest uppercase mb-2">Capital Care AI</p>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[var(--p-text)] font-['Outfit'] mb-1">{isLogin ? 'Welcome back' : 'Create account'}</h1>
-          <p className="text-sm text-[var(--p-text-secondary)] mb-6">{isLogin ? 'Sign in to your account' : 'Start managing your finances'}</p>
+          <h1 className="text-2xl font-extrabold text-[var(--dark)] mb-1">{isLogin ? 'Welcome back' : 'Create account'}</h1>
+          <p className="text-sm text-[var(--muted)] mb-6">{isLogin ? 'Sign in to your dashboard' : 'Start managing your finances for free'}</p>
           <form onSubmit={submit} className="space-y-3.5" data-testid={isLogin ? 'login-form' : 'register-form'}>
-            {!isLogin && <div><label className="block text-xs font-medium text-[var(--p-text)] mb-1">Name</label><input type="text" value={name} onChange={e=>setName(e.target.value)} className="w-full h-10 bg-[var(--p-surface)] border border-[var(--p-border)] rounded-lg px-3 text-sm text-[var(--p-text)] placeholder-[var(--p-text-muted)] focus:border-[var(--p-primary)] focus:ring-2 focus:ring-[var(--p-primary)]/20 outline-none" placeholder="Your name" data-testid="name-input"/></div>}
-            <div><label className="block text-xs font-medium text-[var(--p-text)] mb-1">Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} className="w-full h-10 bg-[var(--p-surface)] border border-[var(--p-border)] rounded-lg px-3 text-sm text-[var(--p-text)] placeholder-[var(--p-text-muted)] focus:border-[var(--p-primary)] focus:ring-2 focus:ring-[var(--p-primary)]/20 outline-none" placeholder="you@example.com" required data-testid="email-input"/></div>
-            <div><label className="block text-xs font-medium text-[var(--p-text)] mb-1">Password</label><div className="relative"><input type={showPw?'text':'password'} value={password} onChange={e=>setPassword(e.target.value)} className="w-full h-10 bg-[var(--p-surface)] border border-[var(--p-border)] rounded-lg px-3 pr-10 text-sm text-[var(--p-text)] placeholder-[var(--p-text-muted)] focus:border-[var(--p-primary)] focus:ring-2 focus:ring-[var(--p-primary)]/20 outline-none" placeholder="••••••••" required data-testid="password-input"/><button type="button" onClick={()=>setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--p-text-muted)]" data-testid="toggle-password-visibility">{showPw?<EyeSlash size={16}/>:<Eye size={16}/>}</button></div></div>
-            {error && <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2" data-testid="auth-error-message"><p className="text-xs text-red-600 dark:text-red-400">{error}</p></div>}
-            <button type="submit" disabled={loading} className="w-full h-10 bg-[var(--p-text)] text-[var(--p-bg)] rounded-lg text-sm font-semibold hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50" data-testid="auth-submit-button">{loading ? 'Please wait...' : isLogin ? 'Sign in' : 'Create account'}</button>
+            {!isLogin && <input type="text" value={name} onChange={e=>setName(e.target.value)} className={inputClass} placeholder="Full name" data-testid="name-input"/>}
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} className={inputClass} placeholder="Email address" required data-testid="email-input"/>
+            <div className="relative">
+              <input type={showPw?'text':'password'} value={password} onChange={e=>setPassword(e.target.value)} className={`${inputClass} pr-12`} placeholder="Password" required data-testid="password-input"/>
+              <button type="button" onClick={()=>setShowPw(!showPw)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" data-testid="toggle-password-visibility">{showPw?<EyeSlash size={18}/>:<Eye size={18}/>}</button>
+            </div>
+            {error && <div className="bg-[var(--red-light)] rounded-2xl px-4 py-2.5" data-testid="auth-error-message"><p className="text-xs text-[var(--red)]">{error}</p></div>}
+            <button type="submit" disabled={loading} className="w-full btn-coral h-12 text-sm disabled:opacity-50" data-testid="auth-submit-button">{loading ? 'Please wait...' : isLogin ? 'Sign in' : 'Create account'}</button>
           </form>
-          <p className="mt-5 text-center text-xs text-[var(--p-text-muted)]">{isLogin?"Don't have an account? ":"Already have an account? "}<button onClick={()=>{setIsLogin(!isLogin);setError('');}} className="text-[var(--p-primary)] font-medium hover:underline" data-testid="toggle-auth-mode-button">{isLogin?'Sign up':'Sign in'}</button></p>
+          <p className="mt-5 text-center text-xs text-[var(--muted)]">{isLogin?"Don't have an account? ":"Already have an account? "}<button onClick={()=>{setIsLogin(!isLogin);setError('');}} className="text-[var(--coral)] font-semibold hover:underline" data-testid="toggle-auth-mode-button">{isLogin?'Sign up free':'Sign in'}</button></p>
         </div>
       </div>
     </div>
