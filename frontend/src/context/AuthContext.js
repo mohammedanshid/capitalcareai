@@ -11,11 +11,19 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { checkAuth(); }, []);
+  // Re-check plan when tab regains focus (user returns from Stripe)
+  useEffect(() => {
+    const onFocus = () => { if (user) checkAuth(); };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+    // eslint-disable-next-line
+  }, [user]);
   const checkAuth = async () => {
     try { const { data } = await axios.get(`${API}/api/auth/me`, { withCredentials: true }); setUser(data); }
     catch { setUser(false); }
     finally { setLoading(false); }
   };
+  const refreshUser = checkAuth;
 
   const login = async (email, password) => {
     try {
@@ -41,5 +49,5 @@ export const AuthProvider = ({ children }) => {
     setUser(false);
   };
 
-  return <AuthContext.Provider value={{ user, loading, login, register, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>{children}</AuthContext.Provider>;
 };

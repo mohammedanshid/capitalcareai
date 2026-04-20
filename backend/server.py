@@ -72,11 +72,11 @@ class LoginBody(BaseModel):
 async def register(body: RegBody, response: Response):
     em = body.email.lower()
     if await db.users.find_one({"email": em}): raise HTTPException(400, "Email taken")
-    doc = {"name": body.name, "email": em, "password_hash": hash_pw(body.password), "persona": None, "created_at": datetime.now(timezone.utc)}
+    doc = {"name": body.name, "email": em, "password_hash": hash_pw(body.password), "persona": None, "plan": "free", "subscription_status": "inactive", "created_at": datetime.now(timezone.utc)}
     r = await db.users.insert_one(doc)
     uid = str(r.inserted_id)
     set_cookies(response, uid, em)
-    return {"id": uid, "name": body.name, "email": em, "persona": None}
+    return {"id": uid, "name": body.name, "email": em, "persona": None, "plan": "free", "subscription_status": "inactive"}
 
 @api.post("/auth/login")
 async def login(body: LoginBody, response: Response):
@@ -85,7 +85,7 @@ async def login(body: LoginBody, response: Response):
     if not u or not verify_pw(body.password, u["password_hash"]): raise HTTPException(401, "Invalid credentials")
     uid = str(u["_id"])
     set_cookies(response, uid, em)
-    return {"id": uid, "name": u["name"], "email": em, "persona": u.get("persona")}
+    return {"id": uid, "name": u["name"], "email": em, "persona": u.get("persona"), "plan": u.get("plan", "free"), "subscription_status": u.get("subscription_status", "inactive")}
 
 @api.post("/auth/logout")
 async def logout(response: Response):
@@ -937,18 +937,65 @@ async def stripe_webhook(request: Request):
     try:
         event = await stripe_checkout.handle_webhook(body, sig)
         if event.payment_status == "paid":
-            tx = await db.payment_transactions.find_one({"session_id": event.session_id})
-            if tx and tx.get("payment_status") != "paid":
-                await db.payment_transactions.update_one({"session_id": event.session_id}, {"$set": {"payment_status": "paid"}})
-                plan_id = event.metadata.get("plan_id", "")
-                plan_tier = "pro" if "pro" in plan_id else "elite" if "elite" in plan_id else "free"
-                user_id = event.metadata.get("user_id", "")
-                if user_id:
-                    await db.users.update_one({"_id": ObjectId(user_id)}, {"$set": {"plan": plan_tier}})
+            # 1) Our own checkout session path (has metadata)
+            metadata = getattr(event, "metadata", {}) or {}
+            plan_id = metadata.get("plan_id", "")
+            user_id = metadata.get("user_id", "")
+            user_email = metadata.get("user_email", "")
+            # 2) Fallback: direct Stripe payment link (no metadata). Match by customer email.
+            if not user_email:
+                user_email = getattr(event, "customer_email", "") or getattr(event, "email", "") or ""
+            # Determine plan tier
+            plan_tier = None
+            if plan_id:
+                plan_tier = "pro" if "pro" in plan_id else "elite" if "elite" in plan_id else None
+            if not plan_tier:
+                # Use amount_total (cents) to decide: 499 => pro, 999 => elite
+                amount_cents = int((getattr(event, "amount_total", 0) or 0))
+                if amount_cents == 499: plan_tier = "pro"
+                elif amount_cents == 999: plan_tier = "elite"
+                # Yearly fallback
+                elif amount_cents in (9599, 4790, 5988): plan_tier = "pro"
+                elif amount_cents in (19199, 9590, 11988): plan_tier = "elite"
+            if not plan_tier:
+                logging.warning(f"Stripe webhook: could not determine plan for session {event.session_id}")
+                return {"ok": True}
+            # Update transaction log if exists
+            await db.payment_transactions.update_one({"session_id": event.session_id}, {"$set": {"payment_status": "paid", "plan_tier": plan_tier}}, upsert=True)
+            # Update user
+            old_plan = None
+            if user_id:
+                old = await db.users.find_one({"_id": ObjectId(user_id)})
+                old_plan = (old or {}).get("plan", "free")
+                await db.users.update_one({"_id": ObjectId(user_id)}, {"$set": {"plan": plan_tier, "subscription_status": "active", "plan_updated_at": datetime.now(timezone.utc).isoformat()}})
+            elif user_email:
+                old = await db.users.find_one({"email": user_email.lower()})
+                if old:
+                    old_plan = old.get("plan", "free")
+                    await db.users.update_one({"_id": old["_id"]}, {"$set": {"plan": plan_tier, "subscription_status": "active", "plan_updated_at": datetime.now(timezone.utc).isoformat()}})
+            # Audit log
+            await db.admin_audit_log.insert_one({
+                "event": "plan_change",
+                "user_email": user_email,
+                "old_plan": old_plan, "new_plan": plan_tier,
+                "stripe_session_id": event.session_id,
+                "amount": getattr(event, "amount_total", 0),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            })
         return {"ok": True}
     except Exception as e:
         logging.error(f"Webhook error: {e}")
         return {"ok": False}
+
+# Manual sync endpoint — user calls this after returning from Stripe payment link.
+# Trusts the logged-in user's email, checks Stripe for any recent paid session,
+# or (fallback) allows plan refresh when caller passes a confirmed session_id.
+@api.post("/user/refresh-plan")
+async def refresh_plan(request: Request, u: dict = Depends(current_user)):
+    # Re-read user from DB (in case webhook already updated)
+    fresh = await db.users.find_one({"_id": ObjectId(u["_id"])})
+    if not fresh: raise HTTPException(404, "User not found")
+    return {"plan": fresh.get("plan", "free"), "subscription_status": fresh.get("subscription_status", "inactive")}
 
 @api.get("/user/plan")
 async def get_user_plan(u: dict = Depends(current_user)):

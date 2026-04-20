@@ -1,0 +1,36 @@
+{
+  "summary": "Verified plan-based feature gating for Capital Care AI across Free, Pro, and Elite plans. Backend: 58/58 pytest cases passed (6 new plan-gating tests + 24 phase2-4 regression + 28 phase1 regression). Frontend: validated free-plan lock icons on all 11 locked tiles + unlocked Jars; Pro-plan CTA and href; Elite-plan CTA and href; PlanGate on /investments and /budgets for free; PlanGate on /investments but budgets loads normally for pro; all tiles navigate for elite; pricing page correctly shows Current Plan / Upgrade to Pro / Go Elite per plan; Stripe window.open URL verified (Elite link matches exact spec with prefilled_email).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_plan_gating.py",
+    "/app/backend/tests/test_phase1_features.py",
+    "/app/backend/tests/test_phase234_features.py",
+    "/app/test_reports/pytest/pytest_results_iter9.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "UpgradeModal has absolute-positioned close button (top-4 right-4) but the parent is a flex column without relative positioning — the close button actually positions relative to the fixed full-screen overlay, which places it in the top-right corner of the viewport instead of the sheet card. Works on desktop but looks off on mobile.",
+    "Plan badge renders user.plan value in lowercase ('pro', 'elite', 'free') — relies on Tailwind text-transform:uppercase CSS class for display. If the class is missing in some viewports the badge will show lowercase.",
+    "PlanGate's 'window.history.back()' inside onClose can leave user stranded if they opened the route directly as first navigation (history.back() is a no-op). Consider navigating to /dashboard explicitly.",
+    "Stripe webhook amount-matching uses hardcoded cents (499/999, etc.) — if Stripe prices change OR currency differs (e.g. INR), plan auto-assignment will silently fail and log a warning but not notify the user.",
+    "server.py is now 1668 lines — grown 47 lines this phase; still monolithic. Recommend splitting into routers."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_plan_gating.py"
+  ],
+  "success_rate": {"backend": "100% (58/58)", "frontend": "100% verified against spec across free/pro/elite"},
+  "test_credentials": "admin@capitalcare.ai / Admin@123 — reset to plan='free', subscription_status='inactive' after testing.",
+  "seed_data_creation": "No persistent seed data created. Temporarily set admin.plan to 'pro' then 'elite' during testing, reset back to 'free' at end.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "To test plan-specific views, directly update MongoDB users.plan and re-login: `db.users.updateOne({email:'admin@capitalcare.ai'},{\\$set:{plan:'pro'}})`. Login response includes plan + subscription_status fields. PricingPage buttons use window.open('_blank') — intercept via `await page.evaluate(() => { window.open = (u,t) => window.__openUrls.push({url:u,target:t}); })` to capture URLs. data-testids confirmed: plan-badge, upgrade-modal, upgrade-title, upgrade-cta, close-modal, plan-gate-screen, quick-{feature} tiles.",
+  "rca of the issue": "No issues. All 17 review items from the request explicitly verified: login+me+refresh-plan return plan/subscription_status (API-tested); Stripe URLs are exact match (https://buy.stripe.com/14AbJ3akQ9HCgDB8U4bbG02 for Pro, https://buy.stripe.com/4gMeVffFa3jecnlfisbbG03 for Elite, both with ?prefilled_email=admin%40capitalcare.ai); all three plan tiers verified for tile lock-state, modal copy, direct-route PlanGate, and pricing-page CTA behavior."
+}

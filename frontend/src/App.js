@@ -20,6 +20,7 @@ import { SipRdPage } from './pages/SipRdPage';
 import { TaxPage } from './pages/TaxPage';
 import { PricingPage } from './pages/PricingPage';
 import { PaymentSuccessPage } from './pages/PaymentSuccessPage';
+import { PlanGate } from './components/PlanGate';
 import { Toaster } from 'sonner';
 import './App.css';
 
@@ -42,18 +43,18 @@ function App() {
           <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
           <Route path="/transactions" element={<Protected><TransactionsPage /></Protected>} />
           <Route path="/goals" element={<Protected><GoalsPage /></Protected>} />
-          <Route path="/budgets" element={<Protected><BudgetsPage /></Protected>} />
-          <Route path="/loans" element={<Protected><LoansPage /></Protected>} />
-          <Route path="/credit-cards" element={<Protected><CreditCardsPage /></Protected>} />
-          <Route path="/investments" element={<Protected><InvestmentsPage /></Protected>} />
-          <Route path="/real-estate" element={<Protected><RealEstatePage /></Protected>} />
-          <Route path="/net-worth" element={<Protected><NetWorthPage /></Protected>} />
-          <Route path="/zero-budget" element={<Protected><ZeroBudgetPage /></Protected>} />
-          <Route path="/lend-borrow" element={<Protected><LendBorrowPage /></Protected>} />
-          <Route path="/debt-payoff" element={<Protected><DebtPayoffPage /></Protected>} />
+          <Route path="/budgets" element={<Protected><PlanGate feature="budgets"><BudgetsPage /></PlanGate></Protected>} />
+          <Route path="/loans" element={<Protected><PlanGate feature="loans"><LoansPage /></PlanGate></Protected>} />
+          <Route path="/credit-cards" element={<Protected><PlanGate feature="credit_cards"><CreditCardsPage /></PlanGate></Protected>} />
+          <Route path="/investments" element={<Protected><PlanGate feature="investments"><InvestmentsPage /></PlanGate></Protected>} />
+          <Route path="/real-estate" element={<Protected><PlanGate feature="real_estate"><RealEstatePage /></PlanGate></Protected>} />
+          <Route path="/net-worth" element={<Protected><PlanGate feature="net_worth"><NetWorthPage /></PlanGate></Protected>} />
+          <Route path="/zero-budget" element={<Protected><PlanGate feature="zero_budget"><ZeroBudgetPage /></PlanGate></Protected>} />
+          <Route path="/lend-borrow" element={<Protected><PlanGate feature="lend_borrow"><LendBorrowPage /></PlanGate></Protected>} />
+          <Route path="/debt-payoff" element={<Protected><PlanGate feature="debt_payoff"><DebtPayoffPage /></PlanGate></Protected>} />
           <Route path="/jars" element={<Protected><JarsPage /></Protected>} />
-          <Route path="/sip-rd" element={<Protected><SipRdPage /></Protected>} />
-          <Route path="/tax" element={<Protected><TaxPage /></Protected>} />
+          <Route path="/sip-rd" element={<Protected><PlanGate feature="sip_rd"><SipRdPage /></PlanGate></Protected>} />
+          <Route path="/tax" element={<Protected><PlanGate feature="tax_basic"><TaxPage /></PlanGate></Protected>} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" richColors />

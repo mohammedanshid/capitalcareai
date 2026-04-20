@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { House, Receipt, Target, ChartLine, UserCircle, SignOut, Robot, DownloadSimple, Sparkle } from '@phosphor-icons/react';
+import { House, Receipt, Target, ChartLine, UserCircle, SignOut, Robot, DownloadSimple, Sparkle, Lock, Crown } from '@phosphor-icons/react';
 import { PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area } from 'recharts';
 import { formatINR } from '../utils/inr';
 import { AIChatDrawer } from '../components/AIChatDrawer';
+import { UpgradeModal } from '../components/UpgradeModal';
+import { hasAccess, requiredPlanFor } from '../utils/plan';
 import axios from 'axios';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -21,6 +23,8 @@ export const Dashboard = () => {
   const [healthScore, setHealthScore] = useState(null);
   const [dailyLimit, setDailyLimit] = useState(null);
   const [digest, setDigest] = useState(null);
+  const [gateFeature, setGateFeature] = useState(null);
+  const plan = user?.plan || 'free';
 
   useEffect(() => { fetchAll(); }, []);
   const fetchAll = async () => {
@@ -68,8 +72,15 @@ export const Dashboard = () => {
             <span className="text-base font-bold text-[var(--dark)]">Capital Care AI</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <button onClick={()=>setChatOpen(true)} className="p-2 rounded-xl text-[var(--muted)] hover:text-[var(--coral)] hover:bg-white transition-all" data-testid="open-chat" title="AI Assistant"><Robot size={18}/></button>
-            <div className="relative group"><button className="p-2 rounded-xl text-[var(--muted)] hover:text-[var(--dark)] hover:bg-white transition-all" data-testid="export-button"><DownloadSimple size={18}/></button><div className="absolute right-0 top-full mt-1 w-36 bg-white rounded-2xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden border border-[var(--border)]"><button onClick={()=>handleExport('csv')} className="w-full text-left px-4 py-2.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--cream-light)]" data-testid="export-csv">Export CSV</button><button onClick={()=>handleExport('pdf')} className="w-full text-left px-4 py-2.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--cream-light)]" data-testid="export-pdf">Export PDF</button></div></div>
+            {/* Plan Badge */}
+            <button onClick={() => plan === 'free' ? nav('/pricing') : null} className={`hidden sm:flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider ${plan === 'elite' ? 'text-white' : plan === 'pro' ? 'bg-[var(--coral)] text-white' : 'bg-[var(--cream-light)] text-[var(--muted)] border border-[var(--border)] hover:bg-white'}`} style={plan === 'elite' ? { background: 'linear-gradient(135deg,#FFD700,#FFA500)' } : {}} data-testid="plan-badge">
+              {plan === 'elite' && <Crown size={10} weight="fill" />} {plan}
+            </button>
+            <button onClick={()=>{ if (!hasAccess(plan, 'ai_chat')) { setGateFeature('ai_chat'); return; } setChatOpen(true); }} className="p-2 rounded-xl text-[var(--muted)] hover:text-[var(--coral)] hover:bg-white transition-all relative" data-testid="open-chat" title="AI Assistant">
+              <Robot size={18}/>
+              {!hasAccess(plan, 'ai_chat') && <span className="absolute top-1 right-1 w-3 h-3 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#FFD700,#FFA500)' }}><Lock size={7} weight="fill" className="text-white" /></span>}
+            </button>
+            <div className="relative group"><button onClick={() => { if (!hasAccess(plan, 'export_pdf_csv')) setGateFeature('export_pdf_csv'); }} className="p-2 rounded-xl text-[var(--muted)] hover:text-[var(--dark)] hover:bg-white transition-all relative" data-testid="export-button"><DownloadSimple size={18}/>{!hasAccess(plan, 'export_pdf_csv') && <span className="absolute top-1 right-1 w-3 h-3 rounded-full flex items-center justify-center bg-[var(--muted)]"><Lock size={7} weight="fill" className="text-white" /></span>}</button>{hasAccess(plan, 'export_pdf_csv') && <div className="absolute right-0 top-full mt-1 w-36 bg-white rounded-2xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 overflow-hidden border border-[var(--border)]"><button onClick={()=>handleExport('csv')} className="w-full text-left px-4 py-2.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--cream-light)]" data-testid="export-csv">Export CSV</button><button onClick={()=>handleExport('pdf')} className="w-full text-left px-4 py-2.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--cream-light)]" data-testid="export-pdf">Export PDF</button></div>}</div>
             <button onClick={()=>{logout();nav('/login');}} className="p-2 rounded-xl text-[var(--muted)] hover:text-[var(--dark)] hover:bg-white transition-all" data-testid="logout-button"><SignOut size={18}/></button>
           </div>
         </div>
@@ -226,33 +237,64 @@ export const Dashboard = () => {
               </div>
             )}
 
-            {/* Quick Access Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+            {/* Plan / Subscription Card */}
+            <div className="cashly-card p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4" data-testid="plan-card">
+              <div className="flex items-center gap-3 flex-1">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: plan === 'elite' ? 'linear-gradient(135deg,#FFD700,#FFA500)' : plan === 'pro' ? 'var(--coral)' : 'var(--cream-light)', border: plan === 'free' ? '1px solid var(--border)' : 'none' }}>
+                  {plan === 'elite' ? <Crown size={22} weight="fill" className="text-white" /> : <Sparkle size={22} weight={plan === 'pro' ? 'fill' : 'regular'} className={plan === 'pro' ? 'text-white' : 'text-[var(--muted)]'} />}
+                </div>
+                <div>
+                  <p className="text-[10px] text-[var(--muted)] uppercase tracking-wider">Your Plan</p>
+                  <p className="text-lg font-bold text-[var(--dark)] capitalize">{plan}{plan === 'elite' && ' · Priority Support'}</p>
+                  <p className="text-[11px] text-[var(--text-secondary)]">{plan === 'free' ? 'Upgrade to unlock Pro and Elite features.' : plan === 'pro' ? 'Upgrade to Elite for Investments, Net Worth and AI Chat.' : 'All features unlocked. Thank you for being Elite!'}</p>
+                </div>
+              </div>
+              {plan !== 'elite' && (
+                <button onClick={() => nav('/pricing')} className="btn-coral text-xs py-2.5 px-5 whitespace-nowrap" data-testid="upgrade-cta-card">{plan === 'free' ? 'Upgrade your plan' : 'Upgrade to Elite'}</button>
+              )}
+            </div>
+
+            {/* Quick Access Grid with plan gating */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3" data-testid="quick-access-grid">
               {[
-                {label:'Budgets',path:'/budgets',emoji:'📊'},
-                {label:'Zero Budget',path:'/zero-budget',emoji:'🎯'},
-                {label:'Loans & EMI',path:'/loans',emoji:'🏦'},
-                {label:'Credit Cards',path:'/credit-cards',emoji:'💳'},
-                {label:'Debt Payoff',path:'/debt-payoff',emoji:'⚡'},
-                {label:'Investments',path:'/investments',emoji:'📈'},
-                {label:'Real Estate',path:'/real-estate',emoji:'🏠'},
-                {label:'Net Worth',path:'/net-worth',emoji:'💎'},
-                {label:'SIP · RD · FD',path:'/sip-rd',emoji:'🌱'},
-                {label:'Savings Jars',path:'/jars',emoji:'🫙'},
-                {label:'Lend & Borrow',path:'/lend-borrow',emoji:'🤝'},
-                {label:'Tax & 80C',path:'/tax',emoji:'🧾'},
-              ].map(item=>(
-                <button key={item.label} onClick={()=>nav(item.path)} className="cashly-card p-4 text-center hover:border-[var(--coral)] border border-transparent transition-all" data-testid={`quick-${item.label.toLowerCase().replace(/\s/g,'-').replace(/·/g,'')}`}>
-                  <span className="text-2xl block mb-1">{item.emoji}</span>
-                  <p className="text-xs font-semibold text-[var(--dark)]">{item.label}</p>
-                </button>
-              ))}
+                {label:'Budgets',path:'/budgets',emoji:'📊',feature:'budgets'},
+                {label:'Zero Budget',path:'/zero-budget',emoji:'🎯',feature:'zero_budget'},
+                {label:'Loans & EMI',path:'/loans',emoji:'🏦',feature:'loans'},
+                {label:'Credit Cards',path:'/credit-cards',emoji:'💳',feature:'credit_cards'},
+                {label:'Debt Payoff',path:'/debt-payoff',emoji:'⚡',feature:'debt_payoff'},
+                {label:'Investments',path:'/investments',emoji:'📈',feature:'investments'},
+                {label:'Real Estate',path:'/real-estate',emoji:'🏠',feature:'real_estate'},
+                {label:'Net Worth',path:'/net-worth',emoji:'💎',feature:'net_worth'},
+                {label:'SIP · RD · FD',path:'/sip-rd',emoji:'🌱',feature:'sip_rd'},
+                {label:'Savings Jars',path:'/jars',emoji:'🫙',feature:'jars_unlimited'},
+                {label:'Lend & Borrow',path:'/lend-borrow',emoji:'🤝',feature:'lend_borrow'},
+                {label:'Tax & 80C',path:'/tax',emoji:'🧾',feature:'tax_basic'},
+              ].map(item=>{
+                // Savings Jars is a special case: free tier gets limited access (1 jar)
+                const unlocked = item.feature === 'jars_unlimited' ? true : hasAccess(plan, item.feature);
+                const isLocked = !unlocked;
+                const required = requiredPlanFor(item.feature);
+                const gold = required === 'elite';
+                const handle = () => { if (isLocked) { setGateFeature(item.feature); } else { nav(item.path); } };
+                return (
+                  <button key={item.label} onClick={handle} className={`cashly-card p-4 text-center relative transition-all border ${isLocked ? 'border-transparent opacity-70 hover:opacity-95' : 'border-transparent hover:border-[var(--coral)]'}`} data-testid={`quick-${item.label.toLowerCase().replace(/\s/g,'-').replace(/·/g,'')}`}>
+                    {isLocked && (
+                      <span className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: gold ? 'linear-gradient(135deg,#FFD700,#FFA500)' : 'var(--muted)' }} data-testid={`lock-${item.feature}`}>
+                        <Lock size={10} weight="fill" className="text-white" />
+                      </span>
+                    )}
+                    <span className="text-2xl block mb-1">{item.emoji}</span>
+                    <p className="text-xs font-semibold text-[var(--dark)]">{item.label}</p>
+                  </button>
+                );
+              })}
             </div>
           </>
         ) : <p className="text-center text-[var(--muted)] py-10">Welcome! Add your first transaction to get started.</p>}
       </main>
 
       <AIChatDrawer isOpen={chatOpen} onClose={()=>setChatOpen(false)} persona="individual" />
+      <UpgradeModal open={!!gateFeature} onClose={() => setGateFeature(null)} feature={gateFeature} requiredPlan={gateFeature ? requiredPlanFor(gateFeature) : 'pro'} />
 
       {/* Bottom Nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-[var(--border)]" data-testid="bottom-nav">

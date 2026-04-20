@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash, Wallet, Minus } from '@phosphor-icons/react';
+import { ArrowLeft, Plus, Trash, Wallet, Minus, Lock } from '@phosphor-icons/react';
 import { formatINR } from '../utils/inr';
 import { toast } from 'sonner';
+import { useAuth } from '../context/AuthContext';
+import { hasAccess } from '../utils/plan';
+import { UpgradeModal } from '../components/UpgradeModal';
+import { FREE_LIMITS } from '../utils/plan';
 import axios from 'axios';
 const API = process.env.REACT_APP_BACKEND_URL;
 const JAR_COLORS = ['#F4845F', '#4CAF85', '#FFB74D', '#7086FD', '#E0A96D', '#C084FC', '#F87171', '#34D399'];
@@ -10,14 +14,20 @@ const input = "w-full h-10 bg-[var(--cream-light)] border border-[var(--border)]
 
 export const JarsPage = () => {
   const nav = useNavigate();
+  const { user } = useAuth();
   const [data, setData] = useState({ jars: [], total_saved: 0 });
   const [showForm, setShowForm] = useState(false);
+  const [gateOpen, setGateOpen] = useState(false);
   const [f, setF] = useState({ name: '', target: '', color: JAR_COLORS[0] });
   const [txnFor, setTxnFor] = useState(null); // {jar, mode}
   const [amount, setAmount] = useState('');
+  const plan = user?.plan || 'free';
+  const unlimitedJars = hasAccess(plan, 'jars_unlimited');
+  const atFreeLimit = !unlimitedJars && data.jars.length >= FREE_LIMITS.jars;
   useEffect(() => { load(); }, []);
   const load = async () => { try { const { data } = await axios.get(`${API}/api/jars`, { withCredentials: true }); setData(data); } catch {} };
-  const submit = async (e) => { e.preventDefault(); try { await axios.post(`${API}/api/jars`, { ...f, target: parseFloat(f.target) || 0 }, { withCredentials: true }); toast.success('Jar created'); setShowForm(false); setF({ name: '', target: '', color: JAR_COLORS[0] }); load(); } catch (err) { toast.error('Failed'); } };
+  const tryNew = () => { if (atFreeLimit) { setGateOpen(true); return; } setShowForm(!showForm); };
+  const submit = async (e) => { e.preventDefault(); if (atFreeLimit) { setGateOpen(true); return; } try { await axios.post(`${API}/api/jars`, { ...f, target: parseFloat(f.target) || 0 }, { withCredentials: true }); toast.success('Jar created'); setShowForm(false); setF({ name: '', target: '', color: JAR_COLORS[0] }); load(); } catch (err) { toast.error('Failed'); } };
   const del = async (id) => { await axios.delete(`${API}/api/jars/${id}`, { withCredentials: true }); load(); };
   const txn = async () => { if (!amount || !txnFor) return; try { await axios.post(`${API}/api/jars/${txnFor.jar.id}/${txnFor.mode}`, { amount: parseFloat(amount) }, { withCredentials: true }); toast.success(`${txnFor.mode === 'deposit' ? 'Deposited' : 'Withdrew'} ${formatINR(parseFloat(amount))}`); setTxnFor(null); setAmount(''); load(); } catch { toast.error('Failed'); } };
 
@@ -28,7 +38,7 @@ export const JarsPage = () => {
           <button onClick={() => nav('/dashboard')} className="p-2 rounded-xl hover:bg-white" data-testid="back-button"><ArrowLeft size={18} /></button>
           <h1 className="text-lg font-bold text-[var(--dark)]">Savings Jars</h1>
           <div className="flex-1" />
-          <button onClick={() => setShowForm(!showForm)} className="btn-coral text-xs py-2 px-4" data-testid="add-jar-btn"><Plus size={14} /> New Jar</button>
+          <button onClick={tryNew} className="btn-coral text-xs py-2 px-4" data-testid="add-jar-btn">{atFreeLimit ? <><Lock size={12} /> New Jar</> : <><Plus size={14} /> New Jar</>}</button>
         </div>
       </header>
       <main className="max-w-5xl mx-auto px-4 py-4 space-y-4">
@@ -86,6 +96,7 @@ export const JarsPage = () => {
           </div>
         </div>
       )}
+      <UpgradeModal open={gateOpen} onClose={() => setGateOpen(false)} feature="jars_unlimited" requiredPlan="pro" />
     </div>
   );
 };
