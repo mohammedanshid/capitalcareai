@@ -37,7 +37,7 @@ export const UpgradeModal = ({ open, onClose, feature, requiredPlan }) => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm px-0 sm:px-4" onClick={onClose} data-testid="upgrade-modal">
-      <div className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
+      <div className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 relative" onClick={e => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-4 right-4 p-1 text-[var(--muted)] hover:text-[var(--dark)]" data-testid="close-modal"><X size={20} /></button>
         <div className="flex flex-col items-center text-center">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: gold ? 'linear-gradient(135deg, #FFD700, #FFA500)' : 'linear-gradient(135deg, #F4845F, #e06b47)' }}>

@@ -5,58 +5,75 @@
 - Frontend: React + Recharts + Phosphor Icons + Tailwind CSS
 - Design: Cashly system (cream #F7F5F2, coral #F4845F, white cards, pill buttons)
 
+## Plan Tiers & Feature Gating (Apr 2026)
+
+### Pricing
+- **Free** — $0 forever
+- **Pro** — $4.99/month (Stripe: `https://buy.stripe.com/14AbJ3akQ9HCgDB8U4bbG02`)
+- **Elite** — $9.99/month (Stripe: `https://buy.stripe.com/4gMeVffFa3jecnlfisbbG03`)
+
+### Feature access
+| Feature | Free | Pro | Elite |
+|---|---|---|---|
+| Transactions, Goals, Insights | ✓ | ✓ | ✓ |
+| Savings Jars | 1 only | Unlimited | Unlimited |
+| Budgets, Zero-Based Budget, Loans, Credit Cards | 🔒 Pro | ✓ | ✓ |
+| SIP/RD/FD, Lend & Borrow, Tax 80C | 🔒 Pro | ✓ | ✓ |
+| Weekly Digest, Daily Limit, Export PDF/CSV | 🔒 Pro | ✓ | ✓ |
+| Health Score full breakdown | 🔒 Pro | ✓ | ✓ |
+| Debt Payoff, Investments, Real Estate, Net Worth | 🔒 Elite | 🔒 Elite | ✓ |
+| AI Chat, Form 26AS upload | 🔒 Elite | 🔒 Elite | ✓ |
+
+### UX behaviour
+- Dashboard tiles show lock icon (grey for Pro, gold for Elite) with slightly reduced opacity
+- Click → bottom-sheet `UpgradeModal` with plan price and Stripe CTA (opens in new tab with `?prefilled_email=` pre-filled)
+- Direct route access on gated pages → `PlanGate` screen, auto-returns to dashboard on cancel
+- Plan badge in header (grey/coral/gold-with-crown), subscription card below digest
+- Plan change via webhook: match by email + amount (499¢=pro, 999¢=elite) → updates `users.plan` + audit log
+
 ## Implemented
 
 ### Phase 0 — Foundation
-- Landing page, auth (register/login/logout), JWT httpOnly cookies
-- Dashboard (Individual): 4 KPIs + sparklines, Income vs Expenses chart, Spending donut, 3-month forecast, Smart Insights, Savings goals preview, Health Score ring, Daily Spend Limit, Weekly Digest
-- AI Chat Assistant (GPT-5.2 via Emergent LLM Key)
-- PDF/CSV export, Bank SMS parser
+- Landing page, JWT httpOnly auth, Dashboard with KPIs/charts/forecast/health-score/daily-limit/weekly-digest
+- AI Chat Assistant (GPT-5.2), PDF/CSV export, Bank SMS parser
 
-### Phase 1 — Smart Money (Apr 2026)
-- Budgets (category caps, progress bars, rollover, alerts)
-- Loans & EMI (amortization table, prepayment simulator)
-- Credit Cards (utilization, thresholds)
-- Transactions CRUD, Goals with what-if planner, Auto-save rules
-- Stripe subscription (Free / Pro $9.99 / Elite $19.99, monthly+yearly)
-- Subscription detector (recurring charges from txn history)
+### Phase 1 — Smart Money
+- Budgets (caps, rollover), Loans & EMI (amortization, prepayment), Credit Cards (utilization)
+- Transactions, Goals with auto-save rules, Subscription detector
+- Stripe 3-tier subscription
 
-### Phase 2 — Wealth Tracking (Apr 2026)
-- Investments portfolio (stocks/MF/gold/FD/RD/crypto) with allocation donut, gain/loss
-- Real Estate tracker (property log with appreciation %)
-- Net Worth page (assets - liabilities breakdown with donut charts)
-- Zero-Based Budget Planner (monthly income allocation, spent/remaining per category)
-- Lend & Borrow log (directional entries, interest, settle flow)
-- Debt Payoff Calculator (Avalanche vs Snowball comparison with recommendation)
+### Phase 2 — Wealth Tracking
+- Investments (stocks/MF/gold/FD/RD/crypto) with allocation donut
+- Real Estate tracker, Net Worth page
+- Zero-Based Budget Planner, Lend & Borrow log
+- Debt Payoff Calculator (Avalanche vs Snowball)
 
-### Phase 3 — Savings & Autopilot (Apr 2026)
-- Savings Jars (multiple goals with color picker, deposit/withdraw, progress)
-- SIP / RD Tracker (tenure, expected return, current value, projected maturity)
-- FD Tracker (compounding monthly/quarterly/yearly, maturity date, days-to-maturity)
+### Phase 3 — Savings & Autopilot
+- Savings Jars (deposit/withdraw, color), SIP/RD/FD Tracker
 
-### Phase 4 — Tax & Compliance (Apr 2026)
-- 80C/80D/80CCD(1B)/80E/80G/80TTA/24(b) deduction tracker with per-section limit, utilization %, estimated tax saved at 30%
-- Tax Calendar for FY (advance tax, ITR, TDS, Form 16 — with past/upcoming/due_soon tagging)
-- ITR Summary (auto-categorize transactions into salary/business/capital_gains/house_property/other_sources)
-- Form 26AS PDF upload + parse (extracts TDS entries)
-- Unusual-Spend Alerts (z-score-based anomaly detection per category)
+### Phase 4 — Tax & Compliance
+- 80C/80D/80CCD(1B)/80E/80G/80TTA/24(b) deduction tracker
+- Tax Calendar, ITR auto-categorization, Form 26AS PDF parse, Unusual-spend alerts
+
+### Plan Gating & Stripe Payment Links (this session)
+- Central `plan.js` utility, `UpgradeModal` bottom sheet, `PlanGate` route guard
+- Dashboard tile gating with lock icons
+- Pricing page rewritten with $4.99/$9.99 and direct payment links
+- AuthContext refreshes user on window focus (picks up plan updates after Stripe return)
+- Webhook handles direct payment links (email + amount matching) + writes to admin_audit_log
 
 ## Test Results
-- Backend: 24/24 Phase 2/3/4 (iter 8) + 28/28 Phase 1 (iter 7) = 52/52 (100%)
-- Frontend: 100% — all 9 new pages render, dashboard 12-tile quick access
+- Backend 58/58 (Phase 1: 28, Phase 2-4: 24, Gating: 6) — 100%
+- Frontend 100% — all plan tiers verified
 
-## Test credentials
+## Credentials
 - admin@capitalcare.ai / Admin@123 (see /app/memory/test_credentials.md)
 
-## Refactor Backlog (P2)
-- Split server.py (1621 lines) into /app/backend/routes and /models
-- Cache loan amortization helper (reused in /api/loans and /api/net-worth)
-- Server-side bounds validation (negative deposits, unrealistic rates)
-
-## Future / Ideas (P3)
-- Live market prices for stocks/MF/gold (Alpha Vantage or CoinGecko for crypto)
-- Rental income/expense tracking per property
-- Push notifications for unusual-spend alerts (web push or email)
-- Tax regime comparator (old vs new)
-- Mutual fund XIRR calculator
-- Goal-based investment recommender (via GPT-5.2)
+## Next / Backlog
+- **P0**: Stripe webhook URL configuration (needs to be set in Stripe dashboard for live payments)
+- **P1**: "Welcome to Pro/Elite" confetti modal on first post-upgrade dashboard load
+- **P1**: Stripe Customer Portal link for subscription management
+- **P1**: Payment-failed red banner when `subscription_status=payment_failed`
+- **P2**: Split server.py (1668 lines) into /routes + /models
+- **P2**: Server-side enforcement (currently gating is client-side — Pro/Elite routes should also block on backend)
+- **P3**: Live market prices (Alpha Vantage/CoinGecko), XIRR calculator, tax regime comparator
